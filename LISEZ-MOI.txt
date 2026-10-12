@@ -1,0 +1,11 @@
+BADGE CHANTIER - APPLICATION INSTALLABLE
+
+1. Publier le dossier badge-chantier-pwa sur un hébergement HTTPS de fichiers statiques (par exemple Netlify Drop : https://app.netlify.com/drop).
+2. Sur iPhone : ouvrir l'adresse dans Safari > Partager > Sur l'écran d'accueil > Ajouter.
+3. Sur Android : ouvrir l'adresse dans Chrome > menu > Installer l'application (ou Ajouter à l'écran d'accueil).
+4. Ouvrir l'application une première fois en ligne, puis importer une image de QR Code.
+5. Par la suite, ouvrir l'icône pour afficher le QR Code, même hors connexion.
+
+IMPORTANT : chaque salarié doit importer son propre QR Code sur son propre téléphone. L'image est stockée localement dans IndexedDB ; elle disparaît si les données du site/de l'application sont effacées. Gardez une sauvegarde du QR Code dans vos photos ou Google Drive. Si le QR Code pointe vers une page internet, cette page nécessite une connexion au moment du scan.
+
+Cette archive n'est pas encore publiée : elle ne contient pas de lien public d'installation.

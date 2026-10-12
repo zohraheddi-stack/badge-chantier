@@ -1,0 +1,12 @@
+const qr=document.getElementById('qr'),placeholder=document.getElementById('placeholder'),file=document.getElementById('file'),remove=document.getElementById('remove'),label=document.getElementById('uploadLabel'),status=document.getElementById('status');
+const DB='badge-chantier-local',STORE='images';
+function db(){return new Promise((resolve,reject)=>{const req=indexedDB.open(DB,1);req.onupgradeneeded=()=>req.result.createObjectStore(STORE);req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
+async function read(){const d=await db();return new Promise((resolve,reject)=>{const tx=d.transaction(STORE,'readonly');const r=tx.objectStore(STORE).get('qr');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);tx.oncomplete=()=>d.close()})}
+async function write(blob){const d=await db();return new Promise((resolve,reject)=>{const tx=d.transaction(STORE,'readwrite');tx.objectStore(STORE).put(blob,'qr');tx.oncomplete=()=>{d.close();resolve()};tx.onerror=()=>reject(tx.error)})}
+async function clear(){const d=await db();return new Promise((resolve,reject)=>{const tx=d.transaction(STORE,'readwrite');tx.objectStore(STORE).delete('qr');tx.oncomplete=()=>{d.close();resolve()};tx.onerror=()=>reject(tx.error)})}
+let url;
+function display(blob){if(url)URL.revokeObjectURL(url);if(blob){url=URL.createObjectURL(blob);qr.src=url;qr.style.display='block';placeholder.hidden=true;remove.hidden=false;label.textContent='Changer mon QR Code'}else{qr.removeAttribute('src');qr.style.display='none';placeholder.hidden=false;remove.hidden=true;label.textContent='Importer mon QR Code'}}
+file.addEventListener('change',async()=>{const f=file.files[0];if(!f)return;if(!f.type.startsWith('image/')){status.textContent='Choisissez une image (photo ou capture d’écran).';return}try{await write(f);display(f);status.textContent='QR Code enregistré sur cet appareil.'}catch(e){status.textContent='Enregistrement impossible : vérifiez l’espace disponible.'}file.value=''});
+remove.addEventListener('click',async()=>{if(!confirm('Supprimer le QR Code enregistré sur cet appareil ?'))return;try{await clear();display(null);status.textContent='QR Code supprimé.'}catch(e){status.textContent='Suppression impossible.'}});
+(async()=>{try{display(await read())}catch(e){status.textContent='Stockage local indisponible dans ce navigateur.'}})();
+if('serviceWorker'in navigator && location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
