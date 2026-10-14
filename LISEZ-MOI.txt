@@ -1,7 +1,1 @@
-Badge Chantier V2 – Mon QR Code + Mes documents
-
-La lecture automatique du QR Code dépend du navigateur. Si elle n’est pas disponible, copier le lien du dossier Google Drive dans le champ prévu.
-Les documents sont intégrés via la vue Google Drive quand elle est autorisée. Sinon, le bouton Ouvrir mon dossier fonctionne selon les permissions Google Drive.
-Les fichiers et leurs autorisations restent gérés par Google Drive. Ne rendez pas publics des documents confidentiels.
-
-Mise à jour GitHub Pages : remplacer index.html, app.js et sw.js dans le dépôt. Le cache hors ligne se mettra à jour après réouverture de l’application.
+Badge Chantier V3 – lecture automatique du QR Code sur iPhone et Android.\nRemplacer index.html, app.js et sw.js sur GitHub. Conserver manifest.webmanifest et icons.\nLa lecture iPhone utilise la bibliothèque jsQR chargée depuis cdn.jsdelivr.net et nécessite une connexion Internet au chargement initial. Le QR Code personnel reste consultable hors ligne. Google Drive peut empêcher l’affichage dans l’application ; utiliser alors « Ouvrir mon dossier ».\nLe lien n’est pas demandé au salarié. Il est conservé localement. Les documents ne sont pas téléchargés sur Badge Chantier.\n

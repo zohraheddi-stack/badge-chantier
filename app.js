@@ -6,16 +6,43 @@ async function write(blob){const d=await db();return new Promise((resolve,reject
 async function clear(){const d=await db();return new Promise((resolve,reject)=>{const tx=d.transaction(STORE,'readwrite');tx.objectStore(STORE).delete('qr');tx.oncomplete=()=>{d.close();resolve()};tx.onerror=()=>reject(tx.error)})}
 let url;
 function display(blob){if(url)URL.revokeObjectURL(url);if(blob){url=URL.createObjectURL(blob);qr.src=url;qr.style.display='block';placeholder.hidden=true;remove.hidden=false;label.textContent='Changer mon QR Code'}else{qr.removeAttribute('src');qr.style.display='none';placeholder.hidden=false;remove.hidden=true;label.textContent='Importer mon QR Code'}}
-file.addEventListener('change',async()=>{const f=file.files[0];if(!f)return;if(!f.type.startsWith('image/')){status.textContent='Choisissez une image (photo ou capture d’écran).';return}try{await write(f);display(f);status.textContent='QR Code enregistré sur cet appareil.'}catch(e){status.textContent='Enregistrement impossible : vérifiez l’espace disponible.'}file.value=''});
-remove.addEventListener('click',async()=>{if(!confirm('Supprimer le QR Code enregistré sur cet appareil ?'))return;try{await clear();display(null);status.textContent='QR Code supprimé.'}catch(e){status.textContent='Suppression impossible.'}});
-(async()=>{try{display(await read())}catch(e){status.textContent='Stockage local indisponible dans ce navigateur.'}})();
+file.addEventListener('change',async()=>{const f=file.files[0];if(!f)return;if(!f.type.startsWith('image/')){status.textContent='Choisissez une image (photo ou capture d’écran).';return}try{await write(f);display(f);status.textContent='QR Code enregistré sur cet appareil.';await detectLink(f)}catch(e){status.textContent='Enregistrement impossible : vérifiez l’espace disponible.'}file.value=''});
+remove.addEventListener('click',async()=>{if(!confirm('Supprimer le QR Code enregistré sur cet appareil ?'))return;try{await clear();display(null);resetDocs();status.textContent='QR Code supprimé.'}catch(e){status.textContent='Suppression impossible.'}});
+(async()=>{try{display(await read());const saved=await read();if(saved)await detectLink(saved)}catch(e){status.textContent='Stockage local indisponible dans ce navigateur.'}})();
 if('serviceWorker'in navigator && location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
 
-// Espace documents : le lien est enregistré localement, jamais transmis à Badge Chantier.
-const linkInput=document.getElementById('driveLink'),docs=document.getElementById('docs'),frame=document.getElementById('driveFrame'),openDrive=document.getElementById('openDrive'),decodeStatus=document.getElementById('decodeStatus');
+
+// Lecture du QR Code directement sur le téléphone. Aucun lien à saisir.
+const docs=document.getElementById('docs'),frame=document.getElementById('driveFrame'),openDrive=document.getElementById('openDrive'),decodeStatus=document.getElementById('decodeStatus');
 const LINK_KEY='badge-chantier-drive-link';
-function validDriveLink(value){try{const u=new URL(value);return u.protocol==='https:' && (u.hostname==='drive.google.com'||u.hostname==='docs.google.com') ? u.href : null}catch{return null}}
-function showDocs(value){const link=validDriveLink(value);docs.hidden=!link;if(!link)return;linkInput.value=link;openDrive.href=link;const match=new URL(link).pathname.match(/\/folders\/([^/?#]+)/);frame.src=match?'https://drive.google.com/embeddedfolderview?id='+encodeURIComponent(match[1])+'#list':link;}
-try{showDocs(localStorage.getItem(LINK_KEY))}catch{}
-document.getElementById('saveLink').addEventListener('click',()=>{const link=validDriveLink(linkInput.value.trim());if(!link){decodeStatus.textContent='Saisissez un lien Google Drive valide (https://drive.google.com/...).';return}try{localStorage.setItem(LINK_KEY,link);showDocs(link);decodeStatus.textContent='Lien enregistré sur ce téléphone.'}catch{decodeStatus.textContent='Impossible d’enregistrer le lien.'}});
-document.getElementById('decode').addEventListener('click',async()=>{decodeStatus.textContent='Lecture du QR Code en cours…';try{const blob=await read();if(!blob){decodeStatus.textContent='Importez d’abord votre QR Code.';return}if(!('BarcodeDetector' in window)){decodeStatus.textContent='Lecture automatique non disponible sur ce téléphone. Copiez le lien Google Drive dans le champ ci-dessous.';return}const detector=new BarcodeDetector({formats:['qr_code']});const bitmap=await createImageBitmap(blob);let found;try{found=await detector.detect(bitmap)}finally{bitmap.close()}const link=found.map(x=>validDriveLink(x.rawValue)).find(Boolean);if(!link){decodeStatus.textContent='Aucun lien Google Drive reconnu dans ce QR Code. Vous pouvez saisir le lien manuellement.';return}localStorage.setItem(LINK_KEY,link);showDocs(link);decodeStatus.textContent='Lien récupéré et enregistré !'}catch{decodeStatus.textContent='Lecture impossible sur ce téléphone. Saisissez le lien manuellement.'}});
+function validDriveLink(value){try{const u=new URL(value.trim());return u.protocol==='https:' && (u.hostname==='drive.google.com'||u.hostname==='docs.google.com') ? u.href : null}catch{return null}}
+function resetDocs(){try{localStorage.removeItem(LINK_KEY)}catch{}docs.hidden=true;frame.removeAttribute('src');openDrive.removeAttribute('href');decodeStatus.textContent='';}
+function showDocs(value){const link=validDriveLink(value);if(!link){docs.hidden=true;return false}docs.hidden=false;openDrive.href=link;const match=new URL(link).pathname.match(/\/folders\/([^/?#]+)/);frame.src=match?'https://drive.google.com/embeddedfolderview?id='+encodeURIComponent(match[1])+'#list':link;return true}
+function imageDataFromBlob(blob){return new Promise((resolve,reject)=>{const img=new Image();const src=URL.createObjectURL(blob);img.onload=()=>{try{const c=document.createElement('canvas');const max=1800;const scale=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));c.width=Math.max(1,Math.round(img.naturalWidth*scale));c.height=Math.max(1,Math.round(img.naturalHeight*scale));const ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(img,0,0,c.width,c.height);resolve(ctx.getImageData(0,0,c.width,c.height))}catch(e){reject(e)}finally{URL.revokeObjectURL(src)}};img.onerror=()=>{URL.revokeObjectURL(src);reject(new Error('Image illisible'))};img.src=src})}
+async function decodeQR(blob){
+  // jsQR fonctionne sur iOS et Android, y compris si BarcodeDetector n'existe pas.
+  const data=await imageDataFromBlob(blob);
+  if(typeof jsQR==='function'){
+    for(const inversionAttempts of ['attemptBoth','invertFirst']){
+      const result=jsQR(data.data,data.width,data.height,{inversionAttempts});
+      if(result?.data)return result.data;
+    }
+  }
+  if('BarcodeDetector' in window){
+    const detector=new BarcodeDetector({formats:['qr_code']});
+    const c=document.createElement('canvas');c.width=data.width;c.height=data.height;c.getContext('2d').putImageData(data,0,0);
+    const found=await detector.detect(c);if(found.length)return found[0].rawValue;
+  }
+  return null;
+}
+async function detectLink(blob){
+  decodeStatus.textContent='Lecture de votre QR Code…';
+  try{
+    const content=await decodeQR(blob);
+    const link=content?validDriveLink(content):null;
+    if(!link){resetDocs();decodeStatus.textContent=content?'Ce QR Code ne contient pas de lien Google Drive.':'QR Code non reconnu. Vérifiez la netteté de l’image et votre connexion Internet, puis réessayez.';return}
+    try{localStorage.setItem(LINK_KEY,link)}catch{}
+    showDocs(link);decodeStatus.textContent='Votre dossier a été retrouvé automatiquement.';
+  }catch(e){decodeStatus.textContent='Lecture impossible. Vérifiez votre connexion Internet et réessayez.'}
+}
+document.getElementById('decode').addEventListener('click',async()=>{const blob=await read();if(!blob){decodeStatus.textContent='Importez d’abord votre QR Code.';return}await detectLink(blob)});
