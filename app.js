@@ -29,17 +29,33 @@ function resetDocs(){currentLink=null;try{localStorage.removeItem(LINK_KEY)}catc
 function imageDataFromBlob(blob){return new Promise((resolve,reject)=>{const img=new Image(),src=URL.createObjectURL(blob);img.onload=()=>{try{const c=document.createElement('canvas'),max=1800,scale=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));c.width=Math.max(1,Math.round(img.naturalWidth*scale));c.height=Math.max(1,Math.round(img.naturalHeight*scale));const ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(img,0,0,c.width,c.height);resolve(ctx.getImageData(0,0,c.width,c.height))}catch(e){reject(e)}finally{URL.revokeObjectURL(src)}};img.onerror=()=>{URL.revokeObjectURL(src);reject(new Error('Image illisible'))};img.src=src})}
 async function decodeQR(blob){
  const data=await imageDataFromBlob(blob);
- if(typeof jsQR==='function'){
-  for(const inversionAttempts of ['attemptBoth','invertFirst']){const result=jsQR(data.data,data.width,data.height,{inversionAttempts});if(result?.data)return result.data;}
+ // Utiliser en priorité le lecteur natif du téléphone.
+ if('BarcodeDetector' in window){
+  try{
+   const detector=new BarcodeDetector({formats:['qr_code']});
+   const canvas=document.createElement('canvas');
+   canvas.width=data.width;canvas.height=data.height;
+   canvas.getContext('2d').putImageData(data,0,0);
+   const found=await detector.detect(canvas);
+   if(found.length && found[0].rawValue)return found[0].rawValue;
+  }catch(e){console.warn('Lecteur natif indisponible',e)}
  }
- if('BarcodeDetector' in window){try{const detector=new BarcodeDetector({formats:['qr_code']});const c=document.createElement('canvas');c.width=data.width;c.height=data.height;c.getContext('2d').putImageData(data,0,0);const found=await detector.detect(c);if(found.length)return found[0].rawValue;}catch(e){console.warn('Lecteur QR natif indisponible',e)}}
+ // Secours sur les navigateurs sans lecteur natif.
+ if(typeof jsQR==='function'){
+  for(const attempt of ['attemptBoth','invertFirst']){
+   try{
+    const result=jsQR(data.data,data.width,data.height,{inversionAttempts:attempt});
+    if(result && result.data)return result.data;
+   }catch(e){console.warn('Décodage impossible',e)}
+  }
+ }
  return null;
 }
 async function showDocs(link){currentLink=link;docs.hidden=false;openDrive.href=link;decodeStatus.textContent='Lien du QR Code reconnu. Touchez le bouton pour consulter vos documents.';}
 async function detectLink(blob){
  decodeStatus.textContent='Lecture automatique du QR Code…';
  try{const content=await decodeQR(blob),link=content?parseLink(content):null;
- if(!link){let saved=null;try{saved=parseLink(localStorage.getItem(LINK_KEY)||'')}catch{} if(saved){await showDocs(saved);decodeStatus.textContent='Lien enregistré retrouvé. Vous pouvez ouvrir vos documents.';return;}docs.hidden=true;decodeStatus.textContent=content?'Ce QR Code ne contient pas de lien Web HTTPS reconnu.':'Lecture du QR Code indisponible. Vérifiez votre connexion puis réimportez votre image.';return;}
+ if(!link){let saved=null;try{saved=parseLink(localStorage.getItem(LINK_KEY)||'')}catch{} if(saved){await showDocs(saved);decodeStatus.textContent='Lien enregistré retrouvé. Vous pouvez ouvrir vos documents.';return;}docs.hidden=true;decodeStatus.textContent=content?'Ce QR Code ne contient pas de lien Web HTTPS reconnu.':'Impossible de décoder cette image. Vérifiez votre connexion, puis réimportez le QR Code.';return;}
  try{localStorage.setItem(LINK_KEY,link)}catch{}
  await showDocs(link);
  }catch(e){let saved=null;try{saved=parseLink(localStorage.getItem(LINK_KEY)||'')}catch{}if(saved){await showDocs(saved);decodeStatus.textContent='Lien enregistré retrouvé. Vous pouvez ouvrir vos documents.';}else{docs.hidden=true;decodeStatus.textContent='Lecture automatique indisponible. Connectez-vous à Internet puis réimportez le QR Code.';}}
