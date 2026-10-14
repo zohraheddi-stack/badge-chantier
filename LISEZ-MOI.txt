@@ -1,1 +1,16 @@
-Badge Chantier V3 – lecture automatique du QR Code sur iPhone et Android.\nRemplacer index.html, app.js et sw.js sur GitHub. Conserver manifest.webmanifest et icons.\nLa lecture iPhone utilise la bibliothèque jsQR chargée depuis cdn.jsdelivr.net et nécessite une connexion Internet au chargement initial. Le QR Code personnel reste consultable hors ligne. Google Drive peut empêcher l’affichage dans l’application ; utiliser alors « Ouvrir mon dossier ».\nLe lien n’est pas demandé au salarié. Il est conservé localement. Les documents ne sont pas téléchargés sur Badge Chantier.\n
+BADGE CHANTIER V4 — VERSION DE TEST
+
+1. Décompresser ce ZIP.
+2. Envoyer les fichiers index.html, app.js et sw.js dans la racine du dépôt GitHub Pages (remplacer les fichiers existants).
+3. Attendre le déploiement et ouvrir le site dans Safari/Chrome, idéalement en navigation privée pour écarter le cache.
+4. Importer une image de QR Code contenant un lien HTTPS public Google Drive ou Nextcloud.
+
+FONCTIONS :
+- QR Code conservé localement, affichable hors ligne après installation.
+- Lecture du lien automatiquement depuis l'image (bibliothèque jsQR chargée depuis un CDN à la première utilisation).
+- Google Drive : tentative d'affichage de dossier via embeddedfolderview. Une liste native de PDF n'est PAS garantie.
+- Nextcloud : tentative de liste PDF via WebDAV public. Certains serveurs refusent cette lecture à cause de CORS ou de leurs paramètres. Les boutons PDF ouvrent le partage public, pas directement le PDF.
+- Un lien vers le dossier d'origine est toujours proposé en secours.
+- Aucun lien manuel à saisir.
+
+ATTENTION : C'est une version de TEST, pas une intégration universelle garantie. Le lien public permet à toute personne le possédant d'accéder aux fichiers. N'utilisez que des PDF fictifs pour les essais.
