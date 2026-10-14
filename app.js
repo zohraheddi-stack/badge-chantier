@@ -32,15 +32,15 @@ async function decodeQR(blob){
  if(typeof jsQR==='function'){
   for(const inversionAttempts of ['attemptBoth','invertFirst']){const result=jsQR(data.data,data.width,data.height,{inversionAttempts});if(result?.data)return result.data;}
  }
- if('BarcodeDetector' in window){const detector=new BarcodeDetector({formats:['qr_code']});const c=document.createElement('canvas');c.width=data.width;c.height=data.height;c.getContext('2d').putImageData(data,0,0);const found=await detector.detect(c);if(found.length)return found[0].rawValue;}
+ if('BarcodeDetector' in window){try{const detector=new BarcodeDetector({formats:['qr_code']});const c=document.createElement('canvas');c.width=data.width;c.height=data.height;c.getContext('2d').putImageData(data,0,0);const found=await detector.detect(c);if(found.length)return found[0].rawValue;}catch(e){console.warn('Lecteur QR natif indisponible',e)}}
  return null;
 }
 async function showDocs(link){currentLink=link;docs.hidden=false;openDrive.href=link;decodeStatus.textContent='Lien du QR Code reconnu. Touchez le bouton pour consulter vos documents.';}
 async function detectLink(blob){
  decodeStatus.textContent='Lecture automatique du QR Code…';
  try{const content=await decodeQR(blob),link=content?parseLink(content):null;
- if(!link){docs.hidden=true;decodeStatus.textContent=content?'Ce QR Code ne contient pas de lien Web HTTPS reconnu.':'Lecture impossible. Vérifiez la netteté du QR Code et la connexion Internet au premier chargement.';return;}
+ if(!link){let saved=null;try{saved=parseLink(localStorage.getItem(LINK_KEY)||'')}catch{} if(saved){await showDocs(saved);decodeStatus.textContent='Lien enregistré retrouvé. Vous pouvez ouvrir vos documents.';return;}docs.hidden=true;decodeStatus.textContent=content?'Ce QR Code ne contient pas de lien Web HTTPS reconnu.':'Lecture du QR Code indisponible. Vérifiez votre connexion puis réimportez votre image.';return;}
  try{localStorage.setItem(LINK_KEY,link)}catch{}
  await showDocs(link);
- }catch(e){decodeStatus.textContent='Impossible de lire ce QR Code. Réessayez avec une image nette.';}
+ }catch(e){let saved=null;try{saved=parseLink(localStorage.getItem(LINK_KEY)||'')}catch{}if(saved){await showDocs(saved);decodeStatus.textContent='Lien enregistré retrouvé. Vous pouvez ouvrir vos documents.';}else{docs.hidden=true;decodeStatus.textContent='Lecture automatique indisponible. Connectez-vous à Internet puis réimportez le QR Code.';}}
 }
