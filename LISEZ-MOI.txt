@@ -1,16 +1,7 @@
-BADGE CHANTIER V4 — VERSION DE TEST
+Badge Chantier V5 — test de lecture universelle du lien QR.
 
-1. Décompresser ce ZIP.
-2. Envoyer les fichiers index.html, app.js et sw.js dans la racine du dépôt GitHub Pages (remplacer les fichiers existants).
-3. Attendre le déploiement et ouvrir le site dans Safari/Chrome, idéalement en navigation privée pour écarter le cache.
-4. Importer une image de QR Code contenant un lien HTTPS public Google Drive ou Nextcloud.
+Importez une image de QR Code : le lien HTTPS extrait est affiche dans Mes documents, quel que soit son hebergeur. Le QR reste conserve hors ligne.
 
-FONCTIONS :
-- QR Code conservé localement, affichable hors ligne après installation.
-- Lecture du lien automatiquement depuis l'image (bibliothèque jsQR chargée depuis un CDN à la première utilisation).
-- Google Drive : tentative d'affichage de dossier via embeddedfolderview. Une liste native de PDF n'est PAS garantie.
-- Nextcloud : tentative de liste PDF via WebDAV public. Certains serveurs refusent cette lecture à cause de CORS ou de leurs paramètres. Les boutons PDF ouvrent le partage public, pas directement le PDF.
-- Un lien vers le dossier d'origine est toujours proposé en secours.
-- Aucun lien manuel à saisir.
+La liste automatique des fichiers depend des autorisations et interfaces techniques du service de stockage. Google Drive et Nextcloud ne garantissent pas la liste dans cette version. Un nom de PDF eventuellement detecte dans Nextcloud ouvre le dossier partage, pas directement le PDF.
 
-ATTENTION : C'est une version de TEST, pas une intégration universelle garantie. Le lien public permet à toute personne le possédant d'accéder aux fichiers. N'utilisez que des PDF fictifs pour les essais.
+Remplacez les fichiers du depot GitHub Pages avec le contenu de cette archive, en conservant leur arborescence.

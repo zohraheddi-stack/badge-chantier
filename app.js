@@ -18,6 +18,7 @@ const docs=document.getElementById('docs'), frame=document.getElementById('drive
   openDrive=document.getElementById('openDrive'), decodeStatus=document.getElementById('decodeStatus'),
   fileList=document.getElementById('fileList'), provider=document.getElementById('provider');
 const LINK_KEY='badge-chantier-doc-url';
+const recognizedLink=document.getElementById('recognizedLink');
 let currentLink=null;
 function parseLink(value){
   try {const u=new URL(value.trim());
@@ -32,7 +33,7 @@ function getProvider(link){
  if(/\/s\/[A-Za-z0-9]+/.test(u.pathname)||/\/index.php\/s\/[A-Za-z0-9]+/.test(u.pathname))return 'Nextcloud (partage possible)';
  return 'Autre hébergeur';
 }
-function resetDocs(){currentLink=null;try{localStorage.removeItem(LINK_KEY)}catch{} docs.hidden=true;frame.removeAttribute('src');openDrive.removeAttribute('href');fileList.replaceChildren();decodeStatus.textContent='Importez votre QR Code pour retrouver votre dossier.';}
+function resetDocs(){recognizedLink.textContent='';currentLink=null;try{localStorage.removeItem(LINK_KEY)}catch{} docs.hidden=true;frame.removeAttribute('src');openDrive.removeAttribute('href');fileList.replaceChildren();decodeStatus.textContent='Importez votre QR Code pour retrouver votre dossier.';}
 function imageDataFromBlob(blob){return new Promise((resolve,reject)=>{const img=new Image(),src=URL.createObjectURL(blob);img.onload=()=>{try{const c=document.createElement('canvas'),max=1800,scale=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));c.width=Math.max(1,Math.round(img.naturalWidth*scale));c.height=Math.max(1,Math.round(img.naturalHeight*scale));const ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(img,0,0,c.width,c.height);resolve(ctx.getImageData(0,0,c.width,c.height))}catch(e){reject(e)}finally{URL.revokeObjectURL(src)}};img.onerror=()=>{URL.revokeObjectURL(src);reject(new Error('Image illisible'))};img.src=src})}
 async function decodeQR(blob){
  const data=await imageDataFromBlob(blob);
@@ -57,13 +58,13 @@ async function nextcloudList(link){
  if(!items.length)return false;
  fileList.replaceChildren();
  const heading=document.createElement('p');heading.textContent='Fichiers PDF détectés :';fileList.append(heading);
- for(const item of items){const a=document.createElement('a');a.className='btn secondary';a.style.display='block';a.style.textAlign='left';a.textContent='📄 '+item.name;
+ for(const item of items){const a=document.createElement('a');a.className='btn secondary';a.style.display='block';a.style.textAlign='left';a.textContent='📄 '+item.name+' (ouvrir le dossier)';
  // Direct public WebDAV file URLs may require a password, so use public share URL fallback.
- a.href=link;a.target='_blank';a.rel='noopener noreferrer';a.title='Ouvrir le partage contenant '+item.name;fileList.append(a);}
+ a.href=link;a.target='_blank';a.rel='noopener noreferrer';a.title='Ouvrir le dossier contenant '+item.name;fileList.append(a);}
  return true;
 }
 async function showDocs(link){
- currentLink=link;docs.hidden=false;openDrive.href=link;fileList.replaceChildren();provider.textContent='Source : '+getProvider(link);
+ currentLink=link;recognizedLink.textContent='Lien du QR Code reconnu : '+link;docs.hidden=false;openDrive.href=link;fileList.replaceChildren();provider.textContent='Source : '+getProvider(link);
  const u=new URL(link),isGoogle=['drive.google.com','docs.google.com'].includes(u.hostname);
  const match=isGoogle?u.pathname.match(/\/folders\/([^/?#]+)/):null;
  frame.src=match?'https://drive.google.com/embeddedfolderview?id='+encodeURIComponent(match[1])+'#list':link;
@@ -77,7 +78,7 @@ async function showDocs(link){
 async function detectLink(blob){
  decodeStatus.textContent='Lecture automatique du QR Code…';
  try{const content=await decodeQR(blob),link=content?parseLink(content):null;
- if(!link){docs.hidden=true;decodeStatus.textContent=content?'Ce QR Code ne contient pas de lien Web HTTPS reconnu.':'Lecture impossible. Vérifiez la netteté du QR Code et la connexion Internet au premier chargement.';return;}
+ if(!link){recognizedLink.textContent='';docs.hidden=true;decodeStatus.textContent=content?'Ce QR Code ne contient pas de lien Web HTTPS reconnu.':'Lecture impossible. Vérifiez la netteté du QR Code et la connexion Internet au premier chargement.';return;}
  try{localStorage.setItem(LINK_KEY,link)}catch{}
  await showDocs(link);
  }catch(e){decodeStatus.textContent='Impossible de lire ce QR Code. Réessayez avec une image nette.';}
