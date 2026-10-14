@@ -1,1 +1,9 @@
-BADGE CHANTIER V11\n\nRemplacer les fichiers à la racine du dépôt GitHub Pages (index.html, app.js, sw.js, manifest.webmanifest, icons/).\n\nDeux choix : Charger un QR Code ou Prendre une photo. Le bouton Afficher mes documents apparaît après reconnaissance d'un lien HTTPS.\n\nLe QR Code est conservé hors ligne. Le lecteur de secours jsQR est chargé depuis un CDN : la reconnaissance peut nécessiter Internet si le navigateur ne prend pas en charge BarcodeDetector.\n\nIMPORTANT : les liens publics permettent l'accès aux documents à toute personne possédant le QR Code.\n
+BADGE CHANTIER V12
+
+Deux choix : Charger un QR Code ou Scanner un QR Code en direct. Le scan utilise la caméra arrière et reconnaît automatiquement les liens HTTPS.
+
+Après reconnaissance, le QR Code est enregistré localement, puis le bouton « Afficher mes documents » apparaît. Le QR Code reste disponible hors connexion.
+
+IMPORTANT : la caméra nécessite HTTPS et l'autorisation du navigateur. Le lecteur de secours jsQR reste chargé depuis Internet si BarcodeDetector est indisponible. Sur iPhone, tester dans Safari et l'application installée.
+
+Pour installer : remplacer les fichiers du dépôt GitHub Pages par ceux du ZIP et attendre la publication.

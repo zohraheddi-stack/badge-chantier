@@ -1,6 +1,6 @@
 "use strict";
 const $=id=>document.getElementById(id);
-const qr=$('qr'),placeholder=$('placeholder'),file=$('file'),camera=$('camera'),status=$('status');
+const qr=$('qr'),placeholder=$('placeholder'),file=$('file'),status=$('status');
 const choices=$('choices'),management=$('management'),documents=$('documents'),openDrive=$('openDrive'),decodeStatus=$('decodeStatus');
 const DB='badge-chantier-local',STORE='images',LINK_KEY='badge-chantier-doc-url';
 let previewUrl=null,busy=false;
@@ -21,8 +21,76 @@ async function importQR(input){const blob=input.files?.[0];if(!blob||busy)return
 await saveQR(blob);try{localStorage.setItem(LINK_KEY,link)}catch{}
 display(blob);showLink(link);status.textContent='QR Code enregistré automatiquement.';status.className='success'
 }catch(e){status.textContent=e.message||'Une erreur est survenue.';status.className=''}finally{input.value='';busy=false}}
-file.addEventListener('change',()=>importQR(file));camera.addEventListener('change',()=>importQR(camera));
-$('change').addEventListener('click',()=>{choices.hidden=false;management.hidden=true;status.textContent='Choisissez une autre image ou prenez une nouvelle photo.'});
+file.addEventListener('change',()=>importQR(file));
+
+const scanner=$('scanner'),video=$('video'),scanMessage=$('scanMessage'),scanButton=$('scanButton');
+let stream=null,scanActive=false,scanFrame=0,scanDetector=null,scanBusy=false;
+function stopScanner(){
+ scanActive=false;
+ if(scanFrame)cancelAnimationFrame(scanFrame);
+ scanFrame=0;
+ if(stream){for(const track of stream.getTracks())track.stop();stream=null}
+ video.srcObject=null;scanner.hidden=true;scanButton.disabled=false;
+}
+async function scanTick(){
+ if(!scanActive)return;
+ if(video.readyState>=2 && video.videoWidth && !scanBusy){
+  scanBusy=true;
+  try{
+   const canvas=document.createElement('canvas');
+   const ratio=Math.min(1,1000/video.videoWidth);
+   canvas.width=Math.round(video.videoWidth*ratio);canvas.height=Math.round(video.videoHeight*ratio);
+   const ctx=canvas.getContext('2d',{willReadFrequently:true});
+   ctx.drawImage(video,0,0,canvas.width,canvas.height);
+   let raw=null;
+   if(scanDetector){
+    try{const codes=await scanDetector.detect(canvas);raw=codes[0]?.rawValue||null}catch{scanDetector=null}
+   }
+   if(!raw&&typeof jsQR==='function'){
+    const data=ctx.getImageData(0,0,canvas.width,canvas.height);
+    const result=jsQR(data.data,data.width,data.height,{inversionAttempts:'attemptBoth'});
+    raw=result?.data||null;
+   }
+   if(raw){
+    const link=parseLink(raw);
+    if(link){
+     scanActive=false;
+     scanMessage.textContent='QR Code reconnu. Enregistrement…';
+     const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
+     if(!blob)throw new Error('Image non enregistrée');
+     await saveQR(blob);
+     try{localStorage.setItem(LINK_KEY,link)}catch{}
+     stopScanner();display(blob);showLink(link);
+     status.textContent='QR Code scanné et enregistré automatiquement.';
+     status.className='success';
+     scanBusy=false;return;
+    }else scanMessage.textContent='QR Code détecté, mais il ne contient pas de lien HTTPS valide.';
+   }
+  }catch(e){scanMessage.textContent='Lecture impossible : '+(e.message||'réessayez')}
+  scanBusy=false;
+ }
+ if(scanActive)scanFrame=requestAnimationFrame(scanTick);
+}
+scanButton.addEventListener('click',async()=>{
+ if(scanActive)return;
+ if(!navigator.mediaDevices?.getUserMedia){status.textContent='La caméra en direct n’est pas disponible dans ce navigateur. Utilisez « Charger un QR Code ».';return}
+ scanButton.disabled=true;scanner.hidden=false;scanMessage.textContent='Autorisez l’accès à la caméra si demandé.';
+ try{
+  stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}});
+  video.srcObject=stream;
+  await video.play();
+  scanDetector=null;
+  if('BarcodeDetector'in window)try{scanDetector=new BarcodeDetector({formats:['qr_code']})}catch{}
+  if(!scanDetector&&typeof jsQR!=='function')scanMessage.textContent='Le lecteur QR est indisponible. Vérifiez votre connexion Internet.';
+  else scanMessage.textContent='Cadrez le QR Code : la lecture est automatique.';
+  scanActive=true;scanTick();
+ }catch(e){stopScanner();status.textContent=e.name==='NotAllowedError'?'Accès à la caméra refusé. Autorisez la caméra dans les réglages du navigateur.':'Impossible d’ouvrir la caméra. Vérifiez les autorisations.'}
+});
+$('stopScan').addEventListener('click',()=>{stopScanner();status.textContent='Scan annulé.'});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)stopScanner()});
+window.addEventListener('pagehide',stopScanner);
+
+$('change').addEventListener('click',()=>{choices.hidden=false;management.hidden=true;status.textContent='Chargez une autre image ou scannez un autre QR Code.'});
 $('remove').addEventListener('click',async()=>{if(!confirm('Supprimer le QR Code et son lien de cet appareil ?'))return;try{await deleteQR();try{localStorage.removeItem(LINK_KEY)}catch{}display(null);hideLink();status.textContent='QR Code supprimé.';status.className=''}catch{status.textContent='Suppression impossible.'}});
 (async()=>{try{const saved=await loadQR();if(!saved)return;display(saved);let link=null;try{link=parseLink(localStorage.getItem(LINK_KEY)||'')}catch{}
 if(!link){status.textContent='Lecture du QR Code enregistré…';const raw=await decode(saved);link=raw?parseLink(raw):null;if(link){try{localStorage.setItem(LINK_KEY,link)}catch{}}}

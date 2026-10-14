@@ -26,7 +26,7 @@ footer{font-size:12px;text-align:center;color:#6c7f8b;padding:4px 9px}
 </style>
 </head>
 <body>
-<header>👷 Badge Chantier <span style="font-size:12px;font-weight:500;opacity:.8">V11</span></header>
+<header>👷 Badge Chantier <span style="font-size:12px;font-weight:500;opacity:.8">V12</span></header>
 <main>
 <section class="card">
 <h1>Mon QR Code</h1>
@@ -36,9 +36,9 @@ footer{font-size:12px;text-align:center;color:#6c7f8b;padding:4px 9px}
 <div id="choices">
 <label class="btn" for="file">▣ &nbsp; Charger un QR Code</label>
 <input id="file" type="file" accept="image/*">
-<label class="btn alt" for="camera">📷 &nbsp; Prendre une photo</label>
-<input id="camera" type="file" accept="image/*" capture="environment">
+<button class="btn alt" id="scanButton" type="button">📷 &nbsp; Scanner un QR Code</button>
 </div>
+<div id="scanner" hidden style="margin:15px 0;padding:12px;border-radius:15px;background:#102b3d;color:#fff"><p style="color:white;margin:5px 0 10px">Placez le QR Code dans le cadre. Lecture automatique…</p><video id="video" autoplay muted playsinline style="display:block;width:100%;max-height:360px;object-fit:cover;border-radius:10px"></video><button id="stopScan" class="btn alt" type="button">Annuler le scan</button><p id="scanMessage" role="status" style="color:white;font-size:14px"></p></div>
 <div id="management" hidden>
 <button class="btn alt" id="change" type="button">↻ &nbsp; Changer mon QR Code</button>
 <button class="btn danger" id="remove" type="button">Supprimer mon QR Code</button>
