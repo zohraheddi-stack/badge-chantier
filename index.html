@@ -1,2 +1,58 @@
-<!DOCTYPE html>
-<html lang="fr"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#123b59" name="theme-color"/><meta content="yes" name="apple-mobile-web-app-capable"/><meta content="default" name="apple-mobile-web-app-status-bar-style"/><meta content="Badge Chantier" name="apple-mobile-web-app-title"/><link href="manifest.webmanifest" rel="manifest"/><link href="icons/icon-192.png" rel="apple-touch-icon"/><title>Badge Chantier</title><style>:root{font-family:system-ui,-apple-system,sans-serif;color:#183347;background:#f3f7fa}*{box-sizing:border-box}body{margin:0}header{background:#123b59;color:white;padding:22px 18px;text-align:center;font-size:22px;font-weight:800}main{max-width:520px;margin:0 auto;padding:24px 16px;text-align:center}h1{font-size:24px;margin:12px 0}p{line-height:1.5;color:#4b6070}.card{background:white;border-radius:20px;padding:22px 16px;box-shadow:0 5px 25px #123b5915}#qr{width:min(100%,370px);max-height:60vh;object-fit:contain;border-radius:10px;display:none;margin:16px auto;background:white}#placeholder{padding:65px 12px;border:2px dashed #b9cbd7;border-radius:14px;margin:18px 0;color:#5d7381}.btn{display:inline-block;background:#12679a;color:white;border:0;border-radius:12px;padding:15px 20px;font-size:17px;font-weight:700;cursor:pointer;margin:8px 3px}button.secondary{background:#e8f0f5;color:#123b59}input{display:none}.small{font-size:13px}#status{font-size:13px;min-height:22px}footer{margin:25px auto;color:#6b7d88;font-size:12px}</style></head><body><header>👷 Badge Chantier · Test V8</header><main><div class="card"><h1>Mon QR Code</h1><p>Présentez cet écran pour faire scanner votre badge.</p><img alt="Mon QR Code personnel" id="qr"/><div id="placeholder">Aucun QR Code enregistré.<br/>Importez une image depuis vos photos ou fichiers.</div><label class="btn" for="file" id="uploadLabel">Importer mon QR Code</label><input accept="image/*" id="file" type="file"/><button class="btn secondary" hidden="" id="remove">Supprimer mon QR Code</button><p aria-live="polite" id="status"></p></div><section class="card" style="margin-top:18px"><h1>Mes documents</h1><p>Accédez aux documents associés à votre QR Code.</p><p aria-live="polite" class="small" id="decodeStatus">Importez votre QR Code pour retrouver votre dossier.</p><div hidden="" id="docs"><a class="btn" id="openDrive" rel="noopener noreferrer" target="_blank">Ouvrir mes documents</a></div></section><footer>Votre QR Code et le lien sont conservés sur cet appareil. Le QR Code fonctionne hors ligne ; les documents nécessitent Internet.</footer></main><script defer="" src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script><script defer="" src="app.js"></script></body></html>
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#123b59">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Badge Chantier">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<title>Badge Chantier</title>
+<style>
+:root{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#183347;background:#f3f7fa}
+*{box-sizing:border-box}body{margin:0}header{background:#123b59;color:#fff;padding:21px 14px;text-align:center;font-weight:800;font-size:22px}
+main{max-width:510px;margin:auto;padding:20px 15px 36px}.card{background:#fff;border-radius:20px;padding:23px 18px;margin-bottom:17px;box-shadow:0 5px 24px #123b5912;text-align:center}
+h1{font-size:23px;margin:0 0 8px}p{line-height:1.45;color:#516575} .sub{font-size:14px;margin:0 0 18px}
+#placeholder{padding:48px 12px;border:2px dashed #b9cbd7;border-radius:15px;margin:17px 0;color:#627989;background:#f9fcfd}
+#placeholder svg{display:block;margin:0 auto 10px}#qr{display:none;width:min(100%,340px);max-height:52vh;object-fit:contain;margin:15px auto;border-radius:12px}
+.btn{display:flex;justify-content:center;align-items:center;gap:9px;width:100%;background:#12679a;color:#fff;border:0;border-radius:13px;padding:15px 13px;font-size:16px;font-weight:750;cursor:pointer;text-decoration:none;margin:10px 0}
+.btn.alt{background:#e9f1f7;color:#123b59}.btn.danger{background:#fff;color:#9c3442;border:1px solid #efcdd2;font-size:14px}
+.btn:focus-visible{outline:3px solid #ffbd44;outline-offset:2px}
+input[type=file]{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
+[hidden]{display:none!important}
+#status,#decodeStatus{font-size:14px;min-height:20px}#docs{margin-top:14px}.success{color:#17643b!important}
+footer{font-size:12px;text-align:center;color:#6c7f8b;padding:4px 9px}
+</style>
+</head>
+<body>
+<header>👷 Badge Chantier <span style="font-size:12px;font-weight:500;opacity:.8">V11</span></header>
+<main>
+<section class="card">
+<h1>Mon QR Code</h1>
+<p class="sub">Présentez votre QR Code lors de vos interventions sur chantier.</p>
+<img id="qr" alt="Mon QR Code enregistré">
+<div id="placeholder"><svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#8aa6b8" stroke-width="1.5"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM5 5h3v3H5zM16 5h3v3h-3zM5 16h3v3H5zM14 14h3v3h-3zM20 14v3M14 20h3M20 20h1"/></svg>Aucun QR Code enregistré</div>
+<div id="choices">
+<label class="btn" for="file">▣ &nbsp; Charger un QR Code</label>
+<input id="file" type="file" accept="image/*">
+<label class="btn alt" for="camera">📷 &nbsp; Prendre une photo</label>
+<input id="camera" type="file" accept="image/*" capture="environment">
+</div>
+<div id="management" hidden>
+<button class="btn alt" id="change" type="button">↻ &nbsp; Changer mon QR Code</button>
+<button class="btn danger" id="remove" type="button">Supprimer mon QR Code</button>
+</div>
+<p id="status" role="status" aria-live="polite"></p>
+</section>
+<section class="card" id="documents" hidden>
+<h1>Mes documents</h1>
+<p id="decodeStatus" class="success" aria-live="polite">QR Code reconnu et enregistré.</p>
+<div id="docs"><a id="openDrive" class="btn" target="_blank" rel="noopener noreferrer">📁 &nbsp; Afficher mes documents</a></div>
+</section>
+<footer>Votre QR Code est conservé sur cet appareil, même hors connexion. Une connexion Internet est nécessaire pour consulter les documents.</footer>
+</main>
+<script defer src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script defer src="./app.js"></script>
+</body>
+</html>
