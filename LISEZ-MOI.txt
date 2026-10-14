@@ -1,3 +1,0 @@
-Badge Chantier V14 : le QR Code est régénéré localement depuis le lien HTTPS reconnu. Aucun cadrage ni image de caméra n’est conservé. Le QR est noir et blanc, net, et fonctionne hors connexion.
-Le lecteur de secours jsQR nécessite encore une connexion si BarcodeDetector est indisponible.
-QR Code généré avec le code MIT de Kazuhiko Arase (QRCode for JavaScript).
