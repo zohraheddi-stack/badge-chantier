@@ -1,0 +1,22 @@
+BADGE CHANTIER — VERSION OFFICIELLE V1.0
+
+FONCTIONS
+- Charger une image de QR Code ou scanner en direct avec la caméra.
+- Extraire automatiquement le lien HTTPS.
+- Régénérer un QR Code propre et net depuis ce lien.
+- Conserver le QR Code sur cet appareil, même hors connexion.
+- Afficher le bouton « Afficher mes documents » après reconnaissance du lien.
+- Changer ou supprimer le QR Code.
+
+INSTALLATION SUR GITHUB PAGES
+1. Conservez votre dépôt badge-chantier existant.
+2. Décompressez ce ZIP.
+3. Téléversez TOUS les fichiers à la racine du dépôt, en gardant le dossier icons.
+4. Validez les changements (Commit changes) et attendez la publication GitHub Pages.
+5. Vérifiez que V1.0 apparaît dans l'application.
+
+ATTENTION
+- N'effacez pas les données du navigateur avant d'avoir sauvegardé le QR Code d'origine.
+- Le scanner vidéo demande l'autorisation d'utiliser la caméra et une connexion HTTPS.
+- Le lecteur de secours jsQR est chargé depuis Internet si le navigateur ne possède pas de lecteur natif.
+- Les liens publics restent accessibles à toute personne qui détient le QR Code.
