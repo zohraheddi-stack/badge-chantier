@@ -17,9 +17,21 @@ function pixels(blob){return new Promise((resolve,reject)=>{const image=new Imag
 async function decode(blob){const {data,canvas}=await pixels(blob);if('BarcodeDetector'in window){try{const detector=new BarcodeDetector({formats:['qr_code']});const codes=await detector.detect(canvas);if(codes.length&&codes[0].rawValue)return codes[0].rawValue}catch(e){console.info('Lecteur natif non disponible',e)}}
 if(typeof jsQR==='function'){for(const mode of ['attemptBoth','invertFirst']){try{const r=jsQR(data.data,data.width,data.height,{inversionAttempts:mode});if(r?.data)return r.data}catch(e){console.info('Lecteur de secours',e)}}}
 return null}
+// Regénère un QR net depuis le lien décodé, au lieu de sauvegarder une photo.
+async function cleanQRCode(link){
+ if(typeof BadgeQRCode!=='function')throw new Error('Générateur de QR Code indisponible.');
+ const encoder=new BadgeQRCode(0,BadgeQRErrorLevel.M);
+ encoder.addData(link);encoder.make();
+ const count=encoder.getModuleCount(),quiet=4,unit=Math.max(5,Math.floor(1024/(count+quiet*2)));
+ const canvas=document.createElement('canvas');canvas.width=canvas.height=(count+quiet*2)*unit;
+ const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
+ ctx.fillStyle='#000';for(let y=0;y<count;y++)for(let x=0;x<count;x++)if(encoder.isDark(y,x))ctx.fillRect((x+quiet)*unit,(y+quiet)*unit,unit,unit);
+ const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
+ if(!blob)throw new Error('Impossible de créer le QR Code.');return blob;
+}
 async function importQR(input){const blob=input.files?.[0];if(!blob||busy)return;busy=true;status.textContent='Lecture du QR Code…';try{if(!blob.type.startsWith('image/'))throw new Error('Choisissez une image.');const raw=await decode(blob);const link=raw?parseLink(raw):null;if(!link){status.textContent=raw?'Ce QR Code ne contient pas de lien HTTPS valide.':'QR Code non reconnu. Reprenez une photo nette avec le code entier.';return}
-await saveQR(blob);try{localStorage.setItem(LINK_KEY,link)}catch{}
-display(blob);showLink(link);status.textContent='QR Code enregistré automatiquement.';status.className='success'
+const clean=await cleanQRCode(link);await saveQR(clean);try{localStorage.setItem(LINK_KEY,link)}catch{}
+display(clean);showLink(link);status.textContent='QR Code enregistré automatiquement.';status.className='success'
 }catch(e){status.textContent=e.message||'Une erreur est survenue.';status.className=''}finally{input.value='';busy=false}}
 file.addEventListener('change',()=>importQR(file));
 
@@ -32,31 +44,6 @@ function stopScanner(){
  if(stream){for(const track of stream.getTracks())track.stop();stream=null}
  video.srcObject=null;scanner.hidden=true;scanButton.disabled=false;
 }
-// Recadre uniquement le QR détecté, avec une marge blanche pour faciliter la lecture.
-function qrOnlyCanvas(frame,points){
- if(!points||points.length<3)return null;
- const xs=points.map(p=>p.x),ys=points.map(p=>p.y);
- if(!xs.every(Number.isFinite)||!ys.every(Number.isFinite))return null;
- const left=Math.max(0,Math.floor(Math.min(...xs)));
- const top=Math.max(0,Math.floor(Math.min(...ys)));
- const right=Math.min(frame.width,Math.ceil(Math.max(...xs)));
- const bottom=Math.min(frame.height,Math.ceil(Math.max(...ys)));
- const width=right-left,height=bottom-top;
- if(width<40||height<40)return null;
- // Le QR doit occuper la quasi-totalité de l'image sauvegardée.
- const side=Math.max(width,height),margin=Math.max(12,Math.round(side*.09));
- const output=document.createElement('canvas');
- output.width=output.height=side+margin*2;
- const ctx=output.getContext('2d');
- ctx.fillStyle='#fff';ctx.fillRect(0,0,output.width,output.height);
- ctx.drawImage(frame,left,top,width,height,margin+Math.round((side-width)/2),margin+Math.round((side-height)/2),width,height);
- return output;
-}
-function qrPoints(result){
- if(!result?.location)return null;
- const l=result.location;
- return [l.topLeftCorner,l.topRightCorner,l.bottomRightCorner,l.bottomLeftCorner].filter(Boolean);
-}
 async function scanTick(){
  if(!scanActive)return;
  if(video.readyState>=2 && video.videoWidth && !scanBusy){
@@ -67,31 +54,21 @@ async function scanTick(){
    canvas.width=Math.round(video.videoWidth*ratio);canvas.height=Math.round(video.videoHeight*ratio);
    const ctx=canvas.getContext('2d',{willReadFrequently:true});
    ctx.drawImage(video,0,0,canvas.width,canvas.height);
-   let raw=null,points=null;
+   let raw=null;
    if(scanDetector){
-    try{const codes=await scanDetector.detect(canvas);raw=codes[0]?.rawValue||null;points=codes[0]?.cornerPoints||null}catch{scanDetector=null}
+    try{const codes=await scanDetector.detect(canvas);raw=codes[0]?.rawValue||null}catch{scanDetector=null}
    }
    if(!raw&&typeof jsQR==='function'){
     const data=ctx.getImageData(0,0,canvas.width,canvas.height);
     const result=jsQR(data.data,data.width,data.height,{inversionAttempts:'attemptBoth'});
-    raw=result?.data||null;points=qrPoints(result);
+    raw=result?.data||null;
    }
    if(raw){
     const link=parseLink(raw);
     if(link){
      scanActive=false;
-     scanMessage.textContent='QR Code reconnu. Recadrage automatique…';
-     // Certains navigateurs détectent le lien sans fournir les coins.
-     // Dans ce cas, jsQR peut parfois retrouver les coordonnées du QR.
-     if(!points&&typeof jsQR==='function'){
-      const image=ctx.getImageData(0,0,canvas.width,canvas.height);
-      const located=jsQR(image.data,image.width,image.height,{inversionAttempts:'attemptBoth'});
-      if(located?.data===raw)points=qrPoints(located);
-     }
-     const cropped=qrOnlyCanvas(canvas,points);
-     if(!cropped){scanActive=true;scanMessage.textContent='Lien reconnu, mais cadrage imprécis. Rapprochez le QR Code et réessayez.';scanBusy=false;scanFrame=requestAnimationFrame(scanTick);return;}
-     const blob=await new Promise(resolve=>cropped.toBlob(resolve,'image/png'));
-     if(!blob)throw new Error('Image non enregistrée');
+     scanMessage.textContent='QR Code reconnu. Création d’un QR Code net…';
+     const blob=await cleanQRCode(link);
      await saveQR(blob);
      try{localStorage.setItem(LINK_KEY,link)}catch{}
      stopScanner();display(blob);showLink(link);
@@ -128,6 +105,6 @@ $('change').addEventListener('click',()=>{choices.hidden=false;management.hidden
 $('remove').addEventListener('click',async()=>{if(!confirm('Supprimer le QR Code et son lien de cet appareil ?'))return;try{await deleteQR();try{localStorage.removeItem(LINK_KEY)}catch{}display(null);hideLink();status.textContent='QR Code supprimé.';status.className=''}catch{status.textContent='Suppression impossible.'}});
 (async()=>{try{const saved=await loadQR();if(!saved)return;display(saved);let link=null;try{link=parseLink(localStorage.getItem(LINK_KEY)||'')}catch{}
 if(!link){status.textContent='Lecture du QR Code enregistré…';const raw=await decode(saved);link=raw?parseLink(raw):null;if(link){try{localStorage.setItem(LINK_KEY,link)}catch{}}}
-if(link){showLink(link);status.textContent='QR Code enregistré sur cet appareil.'}else{hideLink();status.textContent='QR Code affiché, mais lien non reconnu. Choisissez « Changer mon QR Code » pour réessayer.'}
+if(link){try{const clean=await cleanQRCode(link);await saveQR(clean);display(clean)}catch(e){console.warn('Ancien QR conservé',e)}showLink(link);status.textContent='QR Code enregistré sur cet appareil.'}else{hideLink();status.textContent='QR Code affiché, mais lien non reconnu. Choisissez « Changer mon QR Code » pour réessayer.'}
 }catch{status.textContent='Impossible de charger le QR Code enregistré.'}})();
 if('serviceWorker'in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});

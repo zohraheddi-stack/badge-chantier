@@ -1,7 +1,3 @@
-BADGE CHANTIER V13 — Scanner avec recadrage automatique du QR Code.
-
-Le scanner extrait les limites du QR Code et enregistre seulement cette zone avec une marge blanche. Si les limites ne sont pas disponibles, il demande de mieux cadrer, au lieu de sauvegarder toute la scène.
-
-IMPORTANT : un QR Code déjà enregistré sous forme de photo complète doit être remplacé avec « Changer mon QR Code » puis « Scanner un QR Code ».
-
-Le lecteur de secours jsQR reste dépendant du réseau sur les navigateurs sans BarcodeDetector.
+Badge Chantier V14 : le QR Code est régénéré localement depuis le lien HTTPS reconnu. Aucun cadrage ni image de caméra n’est conservé. Le QR est noir et blanc, net, et fonctionne hors connexion.
+Le lecteur de secours jsQR nécessite encore une connexion si BarcodeDetector est indisponible.
+QR Code généré avec le code MIT de Kazuhiko Arase (QRCode for JavaScript).
