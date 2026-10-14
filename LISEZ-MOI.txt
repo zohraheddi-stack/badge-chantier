@@ -1,6 +1,6 @@
-Badge Chantier V1.1 – version de test Android et iPhone
-
-Amélioration de la reconnaissance QR (photo et vidéo), essais de contraste et de résolution, caméra avec repli.
-Le lecteur jsQR utilise encore un CDN avec un second fournisseur en secours : reconnaissance hors ligne non garantie sur tous les navigateurs.
-Les QR Codes déjà enregistrés sont conservés.
-Décompresser et envoyer le CONTENU du ZIP à la racine du dépôt GitHub Pages. Tester avant déploiement aux clients.
+Badge Chantier V1.2 — version de test Android/iPhone.
+Décompressez puis déposez tous les fichiers et le dossier icons à la racine du dépôt GitHub Pages.
+Le lecteur jsQR est désormais local et mis en cache par le service worker.
+Scanner caméra : analyse continue avec reprise automatique et aide après 12 secondes.
+Les données existantes sont conservées (IndexedDB et localStorage).
+Vérifiez la version affichée et testez sur vos appareils avant diffusion aux clients.
