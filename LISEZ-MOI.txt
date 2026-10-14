@@ -1,9 +1,7 @@
-BADGE CHANTIER V12
+BADGE CHANTIER V13 — Scanner avec recadrage automatique du QR Code.
 
-Deux choix : Charger un QR Code ou Scanner un QR Code en direct. Le scan utilise la caméra arrière et reconnaît automatiquement les liens HTTPS.
+Le scanner extrait les limites du QR Code et enregistre seulement cette zone avec une marge blanche. Si les limites ne sont pas disponibles, il demande de mieux cadrer, au lieu de sauvegarder toute la scène.
 
-Après reconnaissance, le QR Code est enregistré localement, puis le bouton « Afficher mes documents » apparaît. Le QR Code reste disponible hors connexion.
+IMPORTANT : un QR Code déjà enregistré sous forme de photo complète doit être remplacé avec « Changer mon QR Code » puis « Scanner un QR Code ».
 
-IMPORTANT : la caméra nécessite HTTPS et l'autorisation du navigateur. Le lecteur de secours jsQR reste chargé depuis Internet si BarcodeDetector est indisponible. Sur iPhone, tester dans Safari et l'application installée.
-
-Pour installer : remplacer les fichiers du dépôt GitHub Pages par ceux du ZIP et attendre la publication.
+Le lecteur de secours jsQR reste dépendant du réseau sur les navigateurs sans BarcodeDetector.
