@@ -13,31 +13,45 @@ function parseLink(value){try{const u=new URL(String(value).trim());return u.pro
 function display(blob){if(previewUrl)URL.revokeObjectURL(previewUrl);previewUrl=null;if(blob){previewUrl=URL.createObjectURL(blob);qr.src=previewUrl;qr.style.display='block';placeholder.hidden=true;choices.hidden=true;management.hidden=false}else{qr.removeAttribute('src');qr.style.display='none';placeholder.hidden=false;choices.hidden=false;management.hidden=true}}
 function showLink(link){documents.hidden=false;openDrive.href=link;decodeStatus.textContent='QR Code reconnu. Vos documents sont accessibles.'}
 function hideLink(){documents.hidden=true;openDrive.removeAttribute('href')}
-function imageFromBlob(blob){return new Promise((resolve,reject)=>{const img=new Image(),url=URL.createObjectURL(blob);img.onload=()=>{URL.revokeObjectURL(url);resolve(img)};img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('Image illisible sur cet appareil. Essayez une capture d’écran du QR Code.'))};img.src=url})}
-function canvasFromImage(img,max=2200){const w=img.naturalWidth,h=img.naturalHeight;if(!w||!h)throw new Error('Image vide');const scale=Math.min(1,max/Math.max(w,h));const c=document.createElement('canvas');c.width=Math.max(1,Math.round(w*scale));c.height=Math.max(1,Math.round(h*scale));c.getContext('2d',{willReadFrequently:true}).drawImage(img,0,0,c.width,c.height);return c}
-function enhancedCanvas(source,kind){const c=document.createElement('canvas');c.width=source.width;c.height=source.height;const ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(source,0,0);if(kind==='contrast'||kind==='gray'){const im=ctx.getImageData(0,0,c.width,c.height),d=im.data;for(let i=0;i<d.length;i+=4){const gray=Math.round(d[i]*.299+d[i+1]*.587+d[i+2]*.114);const v=kind==='contrast'?(gray>135?255:0):gray;d[i]=d[i+1]=d[i+2]=v}ctx.putImageData(im,0,0)}return c}
-let detector=null;
-function getDetector(){if(detector)return detector;if(typeof BarcodeDetector==='undefined')return null;try{detector=new BarcodeDetector({formats:['qr_code']});return detector}catch{return null}}
-// Le lecteur jsQR est local et utilisé en priorité : évite les appels natifs bloquants sur iOS.
-function jsDecode(canvas, videoMode=false){
+function imageFromBlob(blob){return new Promise((resolve,reject)=>{const img=new Image(),url=URL.createObjectURL(blob);img.onload=()=>{URL.revokeObjectURL(url);resolve(img)};img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('Image illisible. Essayez une capture d’écran PNG ou JPG du QR Code.'))};img.src=url})}
+function canvasFromImage(img,max=1400){const w=img.naturalWidth,h=img.naturalHeight;if(!w||!h)throw new Error('Image vide');const scale=Math.min(1,max/Math.max(w,h));const c=document.createElement('canvas');c.width=Math.max(1,Math.round(w*scale));c.height=Math.max(1,Math.round(h*scale));c.getContext('2d',{willReadFrequently:true}).drawImage(img,0,0,c.width,c.height);return c}
+function cropCanvas(source,fraction){const size=Math.floor(Math.min(source.width,source.height)*fraction);const c=document.createElement('canvas');c.width=c.height=size; c.getContext('2d',{willReadFrequently:true}).drawImage(source,Math.floor((source.width-size)/2),Math.floor((source.height-size)/2),size,size,0,0,size,size);return c}
+function resizedCanvas(source,max){const scale=Math.min(1,max/Math.max(source.width,source.height));const c=document.createElement('canvas');c.width=Math.max(1,Math.round(source.width*scale));c.height=Math.max(1,Math.round(source.height*scale));c.getContext('2d',{willReadFrequently:true}).drawImage(source,0,0,c.width,c.height);return c}
+function rotatedCanvas(source){const c=document.createElement('canvas');c.width=source.height;c.height=source.width;const ctx=c.getContext('2d',{willReadFrequently:true});ctx.translate(c.width,0);ctx.rotate(Math.PI/2);ctx.drawImage(source,0,0);return c}
+function jsDecode(canvas,options={}){
  if(typeof jsQR!=='function')throw new Error('Lecteur QR indisponible. Rechargez la page.');
- const ctx=canvas.getContext('2d',{willReadFrequently:true});
- const im=ctx.getImageData(0,0,canvas.width,canvas.height);
- const result=jsQR(im.data,im.width,im.height,{inversionAttempts:videoMode?'dontInvert':'attemptBoth'});
+ const ctx=canvas.getContext('2d',{willReadFrequently:true});const im=ctx.getImageData(0,0,canvas.width,canvas.height);
+ const result=jsQR(im.data,im.width,im.height,{inversionAttempts:options.invert?'attemptBoth':'dontInvert'});
  return result?.data||null;
 }
-async function decodeCanvas(canvas,videoMode=false){
- if(typeof jsQR!=='function')throw new Error('Lecteur QR indisponible. Rechargez la page.');
- const variants=videoMode?['normal']:['normal','gray','contrast'];
- for(const variant of variants){
-  try{const c=variant==='normal'?canvas:enhancedCanvas(canvas,variant);const result=jsDecode(c,videoMode);if(result)return result}
-  catch(e){console.warn('Lecture QR',e);if(variant==='normal'&&typeof jsQR!=='function')throw e}
+// Rend la main à Safari entre les tentatives pour éviter une interface figée.
+const yieldFrame=()=>new Promise(resolve=>setTimeout(resolve,0));
+async function decodeCanvas(canvas,options={}){
+ const attempts=options.video?[
+  [canvas,false],
+  [resizedCanvas(cropCanvas(canvas,.72),640),false],
+  [resizedCanvas(canvas,640),true]
+ ]:[
+  [canvas,true],
+  [resizedCanvas(canvas,900),true],
+  [resizedCanvas(cropCanvas(canvas,.8),850),true],
+  [resizedCanvas(cropCanvas(canvas,.55),650),true],
+  [rotatedCanvas(resizedCanvas(canvas,900)),true]
+ ];
+ for(const [c,invert] of attempts){
+  if(options.cancelled?.())return null;
+  await yieldFrame();
+  try{const raw=jsDecode(c,{invert});if(raw)return raw}
+  catch(e){console.warn('Tentative de lecture QR échouée',e);if(typeof jsQR!=='function')throw e}
  }
  return null;
 }
-async function decode(blob){const img=await imageFromBlob(blob);const base=canvasFromImage(img,1600);let raw=await decodeCanvas(base);if(raw)return raw;
- // Réessaie en résolution réduite : utile pour certaines photos iPhone très grandes.
- if(Math.max(base.width,base.height)>1000){const c=canvasFromImage(img,1000);raw=await decodeCanvas(c);if(raw)return raw}
+async function decode(blob){
+ const img=await imageFromBlob(blob);
+ // Différentes tailles pour les photos iPhone/Android, sans dépasser la mémoire mobile.
+ for(const max of [1400,950]){
+  const raw=await decodeCanvas(canvasFromImage(img,max));if(raw)return raw;
+ }
  return null;
 }
 // Regénère un QR net depuis le lien décodé, au lieu de sauvegarder une photo.
@@ -52,7 +66,7 @@ async function cleanQRCode(link){
  const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
  if(!blob)throw new Error('Impossible de créer le QR Code.');return blob;
 }
-async function importQR(input){const blob=input.files?.[0];if(!blob||busy)return;busy=true;status.textContent='Lecture du QR Code…';status.className='';try{if(!blob.type.startsWith('image/'))throw new Error('Choisissez une image.');const raw=await decode(blob);const link=raw?parseLink(raw):null;if(!link){status.textContent=raw?'Ce QR Code ne contient pas de lien HTTPS valide.':'QR Code non reconnu. Essayez une capture d’écran nette, bien cadrée et éclairée.';return}
+async function importQR(input){const blob=input.files?.[0];if(!blob||busy)return;busy=true;status.textContent='Lecture du QR Code…';status.className='';try{if(!blob.type.startsWith('image/')&&!/\.(heic|heif|jpg|jpeg|png|webp)$/i.test(blob.name||''))throw new Error('Choisissez une image.');const raw=await Promise.race([decode(blob),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Lecture trop longue. Essayez une capture d’écran du QR Code.')),18000))]);const link=raw?parseLink(raw):null;if(!link){status.textContent=raw?'Ce QR Code ne contient pas de lien HTTPS valide.':'QR Code non reconnu. Essayez une capture d’écran nette, bien cadrée et éclairée.';return}
 const clean=await cleanQRCode(link);await saveQR(clean);try{localStorage.setItem(LINK_KEY,link)}catch{}
 display(clean);showLink(link);status.textContent='QR Code enregistré automatiquement.';status.className='success'
 }catch(e){status.textContent=e.message||'Une erreur est survenue.';status.className=''}finally{input.value='';busy=false}}
@@ -82,8 +96,9 @@ async function scanTick(){
  try{
   if(video.readyState>=2&&video.videoWidth){
    // Alterne image entière et cadrage central pour les capteurs iPhone/Android.
-   const c=videoCanvas(scanAttempts%3===2);
-   const raw=c?await decodeCanvas(c,true):null;
+   const c=videoCanvas(scanAttempts%4===3);
+   const raw=c?await decodeCanvas(c,{video:true,cancelled:()=>!scanActive}):null;
+   if(!scanActive)return;
    if(raw){
     const link=parseLink(raw);
     if(link){scanMessage.textContent='QR Code reconnu. Enregistrement…';scanActive=false;
@@ -94,7 +109,7 @@ async function scanTick(){
    }
    scanAttempts++;
   }
-  if(Date.now()-scanStarted>12000){scanMessage.textContent='QR Code non reconnu. Rapprochez le téléphone, améliorez la lumière ou utilisez « Charger un QR Code ». Vous pouvez continuer à scanner.'}
+  if(Date.now()-scanStarted>12000&&scanAttempts%6===0){scanMessage.textContent='Toujours en recherche… Éloignez légèrement le téléphone pour faire la mise au point. Le scan continue. Vous pouvez aussi charger une photo.'}
  }catch(e){scanMessage.textContent='Erreur de lecture : '+(e.message||'réessayez')}
  finally{scanBusy=false;if(scanActive)scanTimer=setTimeout(scanTick,230)}
 }

@@ -1,6 +1,1 @@
-Badge Chantier V1.2 — version de test Android/iPhone.
-Décompressez puis déposez tous les fichiers et le dossier icons à la racine du dépôt GitHub Pages.
-Le lecteur jsQR est désormais local et mis en cache par le service worker.
-Scanner caméra : analyse continue avec reprise automatique et aide après 12 secondes.
-Les données existantes sont conservées (IndexedDB et localStorage).
-Vérifiez la version affichée et testez sur vos appareils avant diffusion aux clients.
+Badge Chantier V1.3 — version de test Android/iPhone\n\nLe lecteur jsQR.js est inclus localement. Les photos sont analysées à plusieurs tailles, avec des cadrages centraux et une rotation de secours. Le scanner effectue plusieurs analyses par image et reste annulable.\n\nInstallation : décompressez le ZIP, envoyez les fichiers à la racine de votre dépôt GitHub Pages en conservant icons/, puis validez Commit changes. Vérifiez V1.3 en haut de l’écran.\n\nTestez le chargement et le scanner sur iPhone 12, 15, 17 et Android avant toute diffusion aux clients.\n
